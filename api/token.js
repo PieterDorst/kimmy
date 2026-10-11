@@ -2,7 +2,11 @@
 // short-lived WebRTC conversation token, so the key never reaches the browser.
 // Also used by the Vite dev server (see vite.config.js).
 
-export async function getConversationToken(env = process.env) {
+export async function getConversationToken(env = process.env, password = "") {
+  // Optional lock: when KIMMY_PASSWORD is set, only visitors who know it can start a conversation.
+  if (env.KIMMY_PASSWORD && password !== env.KIMMY_PASSWORD) {
+    return { status: 401, body: { error: "password" } };
+  }
   const key = env.ELEVENLABS_API_KEY;
   const agentId = env.ELEVENLABS_AGENT_ID;
   if (!key || !agentId) {
@@ -16,7 +20,7 @@ export async function getConversationToken(env = process.env) {
 }
 
 export default async function handler(req, res) {
-  const { status, body } = await getConversationToken();
+  const { status, body } = await getConversationToken(process.env, req.headers["x-kimmy-password"] || "");
   res.setHeader("Cache-Control", "no-store");
   res.status(status).json(body);
 }

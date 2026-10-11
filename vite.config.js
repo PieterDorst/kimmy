@@ -6,8 +6,8 @@ function devTokenRoute(env) {
   return {
     name: "kimmy-dev-token",
     configureServer(server) {
-      server.middlewares.use("/api/token", async (_req, res) => {
-        const { status, body } = await getConversationToken(env);
+      server.middlewares.use("/api/token", async (req, res) => {
+        const { status, body } = await getConversationToken(env, req.headers["x-kimmy-password"] || "");
         res.statusCode = status;
         res.setHeader("Content-Type", "application/json");
         res.setHeader("Cache-Control", "no-store");
