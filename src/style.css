@@ -45,6 +45,7 @@ html, body {
   transition: transform 0.1s ease, background 0.2s ease;
 }
 #talk:active { transform: scale(0.97); }
+#view { font: inherit; font-size: 14px; padding: 10px 16px; border-radius: 999px; border: 1px solid #cfc4b8; background: transparent; color: var(--ink); cursor: pointer; }
 #talk:disabled { opacity: 0.5; cursor: default; }
 body[data-state="listening"] #talk { background: #3d6b4f; }
 body[data-state="thinking"] #talk { background: var(--accent); }

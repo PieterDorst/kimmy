@@ -51,7 +51,7 @@ export class Avatar {
     this.head = new TalkingHead(node, {
       ttsEndpoint: "N/A",
       lipsyncModules: [],
-      cameraView: "upper",
+      cameraView: "full",
       cameraRotateEnable: false,
       avatarIdleEyeContact: 0.6,
       avatarSpeakingEyeContact: 0.8,
@@ -65,6 +65,9 @@ export class Avatar {
   async load(onProgress) {
     await this.head.showAvatar(AVATAR, onProgress);
   }
+
+  // Camera framing: "full" (whole body), "upper" (waist up) or "head".
+  setView(view) { this.head.setView(view); }
 
   start() { this.head.start(); this.lipsync?.start?.(); }
   stop() { this.lipsync?.stop?.(); this.head.stop(); }

@@ -2,18 +2,23 @@
 // Usage: npm run create-agent   (reads ELEVENLABS_API_KEY from .env)
 //        (set ELEVENLABS_AGENT_ID to update an existing agent instead of creating one)
 import { readFileSync, writeFileSync } from "node:fs";
-import { PERSONA, FIRST_MESSAGE, CLIENT_TOOLS } from "../src/kimmy.js";
+import { PERSONA, FIRST_MESSAGE, CLIENT_TOOLS, LANGUAGE } from "../src/kimmy.js";
 
 const key = process.env.ELEVENLABS_API_KEY;
 if (!key) { console.error("No ElevenLabs key found. Open the .env file and paste your key right after ELEVENLABS_API_KEY= (no spaces), then save."); process.exit(1); }
 
 const agentId = process.env.ELEVENLABS_AGENT_ID;
+const language = process.env.KIMMY_LANGUAGE || LANGUAGE;
+const voiceId = process.env.KIMMY_VOICE_ID;
+if (!voiceId && language !== "en") {
+  console.log("Tip: for a native Dutch voice, pick one in the ElevenLabs Voice Library and put its id in .env as KIMMY_VOICE_ID=, then run this again.");
+}
 const config = {
   name: "Kimmy",
   conversation_config: {
     agent: {
       first_message: FIRST_MESSAGE,
-      language: "en",
+      language,
       prompt: {
         prompt: PERSONA,
         llm: process.env.KIMMY_LLM || "claude-haiku-4-5",
@@ -22,8 +27,9 @@ const config = {
     },
     tts: {
       // Stock young female voice until Kimmy's own voice is designed.
-      voice_id: process.env.KIMMY_VOICE_ID || "cgSgspJ2msm6clMCkdW9",
-      model_id: "eleven_flash_v2", // English agents must use flash v2 or turbo v2,
+      voice_id: voiceId || "cgSgspJ2msm6clMCkdW9",
+      // English agents must use flash v2; other languages need the multilingual flash v2.5.
+      model_id: language === "en" ? "eleven_flash_v2" : "eleven_flash_v2_5",
     },
     turn: {
       turn_eagerness: "eager",
