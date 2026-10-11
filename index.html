@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe8" />
+    <title>Kimmy</title>
+  </head>
+  <body data-state="idle">
+    <main id="stage">
+      <div id="avatar"></div>
+      <div id="info">Loading Kimmy…</div>
+      <p id="caption" aria-live="polite"></p>
+    </main>
+
+    <footer id="controls">
+      <button id="talk" disabled>Talk to Kimmy</button>
+      <dl id="hud">
+        <div><dt>state</dt><dd id="state">idle</dd></div>
+        <div><dt>reacts</dt><dd id="lat-react">–</dd></div>
+        <div><dt>first audio</dt><dd id="lat-audio">–</dd></div>
+        <div><dt>median</dt><dd id="lat-median">–</dd></div>
+      </dl>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

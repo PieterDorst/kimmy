@@ -1,0 +1,21 @@
+{
+  "name": "kimmy",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "create-agent": "node scripts/create-agent.mjs"
+  },
+  "dependencies": {
+    "@elevenlabs/client": "1.25.0",
+    "@met4citizen/headaudio": "0.1.0",
+    "@met4citizen/talkinghead": "github:met4citizen/TalkingHead#b3e277b3b46f88e557bf28a2c5612a5b04e075c3",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "8.3.1"
+  }
+}

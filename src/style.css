@@ -1,0 +1,61 @@
+:root {
+  --bg: #f4efe8;
+  --ink: #2b2622;
+  --muted: #8a8079;
+  --accent: #c99a6b;
+  --panel: rgba(255, 255, 255, 0.7);
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(120% 80% at 50% 20%, #fffaf3 0%, var(--bg) 60%, #e9e0d4 100%);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+#stage { position: fixed; inset: 0 0 96px 0; }
+#avatar { width: 100%; height: 100%; }
+
+#info {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  padding: 10px 16px; border-radius: 12px; background: var(--panel); color: var(--muted);
+}
+
+#caption {
+  position: absolute; left: 16px; right: 16px; bottom: 12px; margin: 0 auto; max-width: 560px;
+  text-align: center; font-size: 15px; line-height: 1.4; color: var(--ink);
+  min-height: 1.4em; text-shadow: 0 1px 0 #fff;
+}
+
+#controls {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 96px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
+}
+
+#talk {
+  font: inherit; font-weight: 600; font-size: 16px;
+  padding: 14px 28px; border: 0; border-radius: 999px;
+  background: var(--ink); color: #fff; cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+#talk:active { transform: scale(0.97); }
+#talk:disabled { opacity: 0.5; cursor: default; }
+body[data-state="listening"] #talk { background: #3d6b4f; }
+body[data-state="thinking"] #talk { background: var(--accent); }
+body[data-state="speaking"] #talk { background: #7a4b8c; }
+
+#hud { display: flex; gap: 14px; margin: 0; font-size: 12px; color: var(--muted); }
+#hud div { display: flex; flex-direction: column; align-items: center; }
+#hud dt { text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+#hud dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+@media (max-width: 520px) {
+  #stage { bottom: 128px; }
+  #controls { height: 128px; gap: 10px; }
+}
