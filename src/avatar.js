@@ -4,12 +4,11 @@ import { HeadAudio } from "@met4citizen/headaudio/dist/headaudio.min.mjs";
 import headworkletUrl from "@met4citizen/headaudio/dist/headworklet.min.mjs?url";
 import visemeModelUrl from "@met4citizen/headaudio/dist/model-en-mixed.bin?url";
 
-// Stand-in avatar until the real Kimmy GLB exists (VRoid sample from TalkingHead, non-commercial).
-const STANDIN_URL =
-  "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@b3e277b3b46f88e557bf28a2c5612a5b04e075c3/avatars/vroid.glb";
+// Kimmy, made from Pieter's Tripo model by scripts/rig/build.py (skeleton, skin weights, face shapes).
+const KIMMY_URL = "/kimmy.glb";
 
 export const AVATAR = {
-  url: new URLSearchParams(location.search).get("avatar") || import.meta.env.VITE_AVATAR_URL || STANDIN_URL,
+  url: new URLSearchParams(location.search).get("avatar") || import.meta.env.VITE_AVATAR_URL || KIMMY_URL,
   body: "F",
   avatarMood: "happy",
   baseline: { headRotateX: -0.1, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 },

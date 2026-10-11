@@ -15,7 +15,7 @@ This is prototype **P0**: a web page where you talk to a 3D character. She answe
 | `src/behavior.js` | A client-side state machine (`listening → thinking → speaking`), so she reacts the moment you stop talking without waiting for the server. It also measures latency. |
 | `src/kimmy.js` | Persona prompt plus the `set_mood` / `gesture` client tools. It's the single source for both the app and the agent setup script. |
 
-The avatar is a **stand-in** (TalkingHead's VRoid sample, for non-commercial use only) until the real Kimmy GLB exists. Load another avatar with `?avatar=<url-to-glb>` or `VITE_AVATAR_URL`. The model needs ARKit + Oculus viseme blendshapes and a Mixamo-compatible skeleton.
+The avatar is `public/kimmy.glb`, built from Pieter's Tripo model by `scripts/rig/build.py`: it adds a Mixamo-style skeleton (axes copied from TalkingHead's `avatars/brunette-t.glb`), skin weights, a lip cut with a mouth interior, and procedural ARKit + Oculus viseme blendshapes. Her eyes are painted, so blinks squash the eye and gaze doesn't move the pupils. Rebuild with `python3 scripts/rig/build.py <tripo.glb> public/kimmy.glb` (needs numpy and `brunette-t.glb` next to the script). Load another avatar with `?avatar=<url-to-glb>` or `VITE_AVATAR_URL`.
 
 ## Setup
 
