@@ -1,10 +1,11 @@
 // Creates (or updates) the Kimmy agent in ElevenLabs from src/kimmy.js.
-// Usage: ELEVENLABS_API_KEY=... npm run create-agent
+// Usage: npm run create-agent   (reads ELEVENLABS_API_KEY from .env)
 //        (set ELEVENLABS_AGENT_ID to update an existing agent instead of creating one)
+import { readFileSync, writeFileSync } from "node:fs";
 import { PERSONA, FIRST_MESSAGE, CLIENT_TOOLS } from "../src/kimmy.js";
 
 const key = process.env.ELEVENLABS_API_KEY;
-if (!key) { console.error("ELEVENLABS_API_KEY is not set."); process.exit(1); }
+if (!key) { console.error("No ElevenLabs key found. Open the .env file and paste your key right after ELEVENLABS_API_KEY= (no spaces), then save."); process.exit(1); }
 
 const agentId = process.env.ELEVENLABS_AGENT_ID;
 const config = {
@@ -44,4 +45,12 @@ const res = await fetch(url, {
 });
 const body = await res.json().catch(() => ({}));
 if (!res.ok) { console.error(res.status, JSON.stringify(body, null, 2)); process.exit(1); }
-console.log(agentId ? `Updated agent ${agentId}` : `Created agent. Set ELEVENLABS_AGENT_ID=${body.agent_id}`);
+if (agentId) {
+  console.log(`Updated agent ${agentId}`);
+} else {
+  // Save the new agent id into .env so the app can find it.
+  const env = readFileSync(".env", "utf8");
+  const line = `ELEVENLABS_AGENT_ID=${body.agent_id}`;
+  writeFileSync(".env", /^ELEVENLABS_AGENT_ID=.*$/m.test(env) ? env.replace(/^ELEVENLABS_AGENT_ID=.*$/m, line) : `${env.trimEnd()}\n${line}\n`);
+  console.log(`Created Kimmy (${body.agent_id}) and saved the id in .env`);
+}

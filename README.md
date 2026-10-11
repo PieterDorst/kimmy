@@ -22,8 +22,7 @@ The avatar is a **stand-in** (TalkingHead's VRoid sample, for non-commercial use
 ```bash
 npm install
 cp .env.example .env              # add ELEVENLABS_API_KEY
-npm run create-agent              # creates the "Kimmy" agent and prints ELEVENLABS_AGENT_ID
-#   → put that id in .env
+npm run create-agent              # creates the "Kimmy" agent and saves ELEVENLABS_AGENT_ID in .env
 npm run dev                       # http://localhost:5173 (also on your LAN, for testing on a phone)
 ```
 
