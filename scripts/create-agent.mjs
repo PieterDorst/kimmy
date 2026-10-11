@@ -23,7 +23,7 @@ const config = {
     tts: {
       // Stock young female voice until Kimmy's own voice is designed.
       voice_id: process.env.KIMMY_VOICE_ID || "cgSgspJ2msm6clMCkdW9",
-      model_id: "eleven_flash_v2_5",
+      model_id: "eleven_flash_v2", // English agents must use flash v2 or turbo v2,
     },
     turn: {
       turn_eagerness: "eager",

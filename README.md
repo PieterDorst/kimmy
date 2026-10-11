@@ -8,7 +8,7 @@ This is prototype **P0**: a web page where you talk to a 3D character. She answe
 
 | Part | What it does |
 |---|---|
-| **ElevenLabs Agents** (WebRTC) | Speech recognition, the LLM, turn-taking, barge-in, and Kimmy's voice (Flash v2.5), all in one session |
+| **ElevenLabs Agents** (WebRTC) | Speech recognition, the LLM, turn-taking, barge-in, and Kimmy's voice (Flash v2), all in one session |
 | `api/token.js` | Swaps the server-side API key for a short-lived conversation token, so the key never reaches the browser |
 | **TalkingHead** (Three.js) | Renders the avatar, with idle motion, blinking, eye contact, moods and hand gestures |
 | **HeadAudio** | Audio-driven lip sync: reads Kimmy's output audio in the browser and drives the Oculus viseme blendshapes |
