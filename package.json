@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "create-agent": "node --env-file=.env scripts/create-agent.mjs"
+    "create-agent": "node --env-file=.env scripts/create-agent.mjs",
+    "update": "curl -sL https://github.com/PieterDorst/kimmy/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 && npm install"
   },
   "dependencies": {
     "@elevenlabs/client": "1.25.0",
