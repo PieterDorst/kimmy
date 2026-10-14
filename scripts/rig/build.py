@@ -1,13 +1,13 @@
-# Turns Pieter's Tripo Kimmy GLB (Kimmy1 or Kimmy2) into a TalkingHead-ready avatar:
+# Turns Pieter's Tripo Kimmy GLB (Kimmy1, Kimmy2 or Kimmy3) into a TalkingHead-ready avatar:
 # Mixamo/RPM skeleton (local axes copied from brunette-t.glb), skin weights,
 # a lip cut + mouth interior, and procedural ARKit + Oculus viseme blendshapes.
 import json, struct, sys, numpy as np
 from glbio import load, acc
 
 import os
-SRC = sys.argv[1] if len(sys.argv) > 1 else '/mnt/project-files/kimmy/models/Kimmy2.glb'
+SRC = sys.argv[1] if len(sys.argv) > 1 else '/mnt/project-files/kimmy/models/Kimmy3.glb'
 OUT = sys.argv[2] if len(sys.argv) > 2 else 'kimmy.glb'
-PROFILE = sys.argv[3] if len(sys.argv) > 3 else 'kimmy2'
+PROFILE = sys.argv[3] if len(sys.argv) > 3 else 'kimmy3'
 REF = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'brunette-t.glb')
 
 # ---------------------------------------------------------------- mesh in
@@ -17,6 +17,7 @@ P = acc(j, b, prim['attributes']['POSITION']).astype(np.float64)
 N = acc(j, b, prim['attributes']['NORMAL']).astype(np.float64)
 UV = acc(j, b, prim['attributes']['TEXCOORD_0']).astype(np.float64)
 T = acc(j, b, prim['indices']).reshape(-1, 3).astype(np.int64)
+if PROFILE == 'kimmy3': P /= 100   # exported in centimetres
 
 # Tripo splits vertices at every UV seam, which gives faceted shading. Recompute normals
 # smoothed across seams (area-weighted, welded by position) so she reads as a smooth surface.
@@ -49,6 +50,25 @@ if PROFILE == 'kimmy1':   # A-pose, measured from renders
       L[f'LeftHand{f}{k}'] = tuple(base + (tip - base) * t)
   F = dict(MY=.8319, CURVE=.0011, CX=-.0008, XL=-.0205, XR=.019, LIPZ=.066, CHIN=.81, PIT=.045,
            EX=.028, EXO=0, EY=.875, ERX=.0125, ERY=.0115, BROW=.903)
+elif PROFILE == 'kimmy3':   # T-pose, quad remesh (~90k tris) with a normal map; measured from slices and grid renders
+  L = {
+    'Hips': (0, .53, 0), 'Spine': (0, .585, 0), 'Spine1': (0, .635, -.004), 'Spine2': (0, .685, -.008),
+    'Neck': (0, .78, -.015), 'Head': (0, .812, -.012), 'HeadTop_End': (0, .977, -.01),
+    'LeftEye': (.0253, .8776, .048),
+    'LeftShoulder': (.03, .741, -.018), 'LeftArm': (.09, .738, -.022), 'LeftForeArm': (.245, .735, -.024),
+    'LeftHand': (.40, .741, -.024),
+    'LeftUpLeg': (.058, .505, .004), 'LeftLeg': (.078, .29, 0), 'LeftFoot': (.105, .075, -.03), 'LeftToeBase': (.105, .02, .05), 'LeftToe_End': (.105, .02, .11),
+  }
+  for f, pts in [('Thumb', [(.405, .737, -.004), (.417, .735, .004), (.426, .733, .010)]),
+                 ('Index', [(.447, .741, -.0077), (.4614, .741, -.0077), (.4722, .740, -.0077)]),
+                 ('Middle', [(.448, .741, -.021), (.4644, .741, -.021), (.4767, .740, -.021)]),
+                 ('Ring', [(.447, .741, -.033), (.4614, .741, -.033), (.4722, .740, -.033)]),
+                 ('Pinky', [(.444, .740, -.0435), (.4544, .740, -.0435), (.4622, .739, -.0435)])]:
+    pts = [np.array(p) for p in pts]
+    pts.append(pts[2] + (pts[2] - pts[1]) * .9)   # fingertip
+    for k, p in enumerate(pts): L[f'LeftHand{f}{k + 1}'] = tuple(p)
+  F = dict(MY=.8367, CURVE=.0011, CX=-.003, XL=-.021, XR=.015, LIPZ=.069, CHIN=.812, PIT=.045,
+           EX=.0275, EXO=-.0021, EY=.8776, ERX=.0135, ERY=.0095, BROW=.900)
 else:   # kimmy2: T-pose; body joints from Tripo's own auto-rig, face measured from renders
   L = {
     'Hips': (0, .541, .004), 'Spine': (0, .595, .002), 'Spine1': (0, .645, -.002), 'Spine2': (0, .695, -.006),
@@ -105,9 +125,11 @@ def subdivide(P, N, UV, T, sel, phong=0.0):
     out += [(a, ab, ca), (ab, b_, bc), (ca, bc, c), (ab, bc, ca)]
   return np.concatenate(newP), np.concatenate(newN), np.concatenate(newUV), np.array(out, np.int64)
 
-# whole body: one rounded level (about 4x the triangles), then fresh smooth normals
-P, N, UV, T = subdivide(P, N, UV, T, np.ones(len(T), bool), phong=.75)
-N = smooth_normals(P, T)
+# whole body: one rounded level (about 4x the triangles), then fresh smooth normals.
+# Kimmy3 is already dense enough (and has a normal map), so only the face gets extra triangles.
+if PROFILE != 'kimmy3':
+  P, N, UV, T = subdivide(P, N, UV, T, np.ones(len(T), bool), phong=.75)
+  N = smooth_normals(P, T)
 # face: one more flat level, enough density for lips and blinks
 sel = in_face(P[T]).all(1)
 P, N, UV, T = subdivide(P, N, UV, T, sel)
@@ -251,17 +273,52 @@ for nm in bones:
   else: R, t = Rk[pn].T @ Rk[nm], Rk[pn].T @ ((L[nm] - L[pn]) * S)
   local[nm] = (m2q(R), t)
 
+# ---------------------------------------------------------------- hair by colour (Kimmy3)
+# Kimmy3's hair is fused with the jacket at the shoulders, so depth alone can't tell them apart. Hair
+# texels are mid-saturated tan/brown; the cream jacket is pale and the skin more saturated. Hair found
+# this way may only follow the head, neck and spine, never the shoulders or arms.
+HAIRC = None
+if PROFILE == 'kimmy3':
+  import io
+  from PIL import Image
+  t0 = j['textures'][j['materials'][0]['pbrMetallicRoughness']['baseColorTexture']['index']]['source']
+  bv = j['bufferViews'][j['images'][t0]['bufferView']]
+  tex = np.asarray(Image.open(io.BytesIO(b[bv.get('byteOffset', 0): bv.get('byteOffset', 0) + bv['byteLength']]))
+                   .convert('RGB').resize((1024, 1024))) / 255.
+  col = tex[np.clip((UV[:, 1] % 1) * 1023, 0, 1023).astype(int), np.clip((UV[:, 0] % 1) * 1023, 0, 1023).astype(int)]
+  mx, mn = col.max(1), col.min(1); sat = (mx - mn) / np.maximum(mx, 1e-6)
+  ax_, y_, z_ = np.abs(P[:, 0]), P[:, 1], P[:, 2]
+  turtle = (ax_ < .075) & (z_ > -.03) & (y_ < .80) & (y_ > .6) & (mx < .56)
+  arm_ = L['LeftArm']   # inside the sleeve's own tube it is jacket, whatever the colour
+  sleeve = (ax_ > .1) & (z_ > arm_[2] - .055) & (z_ < arm_[2] + .045) & (np.abs(y_ - arm_[1]) < .05)
+  h = ((sat > .22) & (sat < .56) & (mx < .88) & (y_ > .5) & (ax_ < .16) & ~turtle & ~sleeve).astype(float)
+  # single texels (jacket folds, shadows) get caught too: smooth the guess over the welded mesh so only
+  # coherent patches of hair remain
+  _, wld = np.unique(np.round(P / 1e-5).astype(np.int64), axis=0, return_inverse=True); wld = wld.ravel()
+  E = np.concatenate([wld[T[:, [0, 1]]], wld[T[:, [1, 2]]], wld[T[:, [2, 0]]]])
+  hw = np.zeros(wld.max() + 1); np.maximum.at(hw, wld, h)
+  deg = np.bincount(E.ravel(), minlength=len(hw)).astype(float)
+  for _ in range(8):
+    acc_h = hw.copy(); np.add.at(acc_h, E[:, 0], hw[E[:, 1]]); np.add.at(acc_h, E[:, 1], hw[E[:, 0]])
+    hw = acc_h / (1 + deg)
+  # 0..1 hair amount: weights blend from body to hair-only across the boundary, so the fused
+  # hair/jacket surface stretches gently instead of tearing
+  HAIRC = np.clip((hw[wld] - .3) / .4, 0, 1)
+  print('hair vertices', int((HAIRC > .5).sum()))
+  if os.environ.get('HAIRDUMP'): np.save(os.environ['HAIRDUMP'], np.c_[P, HAIRC, col])
+
 # ---------------------------------------------------------------- skin weights
 DEFORM = [nm for nm in bones if nm in PRIMARY]
 seg_a = np.array([L[nm] for nm in DEFORM]); seg_b = np.array([L[PRIMARY[nm]] for nm in DEFORM])
 
-def allowed(nm, p):
+def allowed(nm, p, hairy=False):
   # Which vertices a bone may influence, relative to the joints (keeps hair off the arms, legs apart, etc.)
   x, y, z = p[:, 0], p[:, 1], p[:, 2]; ax = np.abs(x)
   Y = lambda b_: L[b_][1]
   arm, hand = L['LeftArm'], L['LeftHand']
   # long hair hanging in front of or behind the shoulders: outside the sleeve's depth range
   hair = (ax < arm[0] + .06) & ((z > arm[2] + .045) | (z < arm[2] - .055))
+  if hairy: hair = np.ones(len(p), bool)
   sideok = (x > .004) if nm.startswith('Left') else (x < -.004) if nm.startswith('Right') else np.ones(len(p), bool)
   if 'Hand' in nm and nm[-1] in '123':
     base = (ax > hand[0] + .005) & (z > -.012) if 'Thumb' in nm else (ax > hand[0] + .025)
@@ -277,18 +334,24 @@ def allowed(nm, p):
           'Spine2': y > Y('Spine2') - .075, 'Spine1': (y > Y('Spine1') - .075) & (y < Y('Spine1') + .125),
           'Spine': (y > Y('Spine') - .095) & (y < Y('Spine') + .105), 'Hips': y < Y('Hips') + .10}[nm]
 
-def weights(p):
+def dense_weights(p, hairy=False):
   ab = seg_b - seg_a
   d = np.empty((len(p), len(DEFORM)))
   for i in range(len(DEFORM)):
     t = np.clip(((p - seg_a[i]) @ ab[i]) / (ab[i] @ ab[i]), 0, 1)
     d[:, i] = np.linalg.norm(p - (seg_a[i] + t[:, None] * ab[i]), axis=1)
-    d[~allowed(DEFORM[i], p), i] = np.inf
+    d[~allowed(DEFORM[i], p, hairy), i] = np.inf
   # rigid face: lips, eyes and brows must move only by blendshapes
   hard = (p[:, 1] > F['CHIN'] - .01) & (np.abs(p[:, 0]) < .075) & (p[:, 2] > .02)
   d[hard] = np.inf; d[hard, DEFORM.index('Head')] = .01
   d = np.maximum(d, .004)
   w = (d.min(1, keepdims=True) / d) ** 7
+  return w / w.sum(1, keepdims=True)
+
+def weights(p):
+  w = dense_weights(p)
+  if HAIRC is not None:
+    a = HAIRC[:, None]; w = (1 - a) * w + a * dense_weights(p, hairy=True)
   idx = np.argsort(-w, 1)[:, :4]
   ww = np.take_along_axis(w, idx, 1); ww /= ww.sum(1, keepdims=True)
   ww[ww < .01] = 0; ww /= ww.sum(1, keepdims=True)
@@ -296,6 +359,7 @@ def weights(p):
 
 Jn, Wn = weights(P)
 Jn = np.array([bones.index(DEFORM[k]) for k in range(len(DEFORM))])[Jn]
+if os.environ.get('WDUMP'): np.savez(os.environ['WDUMP'], P=P, J=Jn, W=Wn, bones=np.array(bones), H=HAIRC if HAIRC is not None else 0)
 Jm = np.zeros((len(MP), 4), int); Jm[:, 0] = bones.index('Head'); Wm = np.zeros((len(MP), 4)); Wm[:, 0] = 1
 
 # ---------------------------------------------------------------- blendshapes (computed in source units)
@@ -445,13 +509,24 @@ midx = accessor(MT.astype(np.uint32).ravel(), 5125, 'SCALAR', ELEM)
 accs.append({'componentType': 5126, 'count': len(MP), 'type': 'VEC3', 'min': [0, 0, 0], 'max': [0, 0, 0]})
 zero = len(accs) - 1
 
-# textures from the source file
+# textures from the source file. Big 4K PNGs (Kimmy3's normal and roughness maps) are re-encoded as JPEG
+# so the download stays small enough for phones; the roughness/metal map has no fine detail, so it goes to 2K.
+mat = dict(j['materials'][0]); mat['name'] = 'Kimmy'; mat.pop('extensions', None)
+rm_tex = mat.get('pbrMetallicRoughness', {}).get('metallicRoughnessTexture')
+rm_img = j['textures'][rm_tex['index']]['source'] if rm_tex else None
 images = []
-for im in j['images']:
+for ii, im in enumerate(j['images']):
   bv = j['bufferViews'][im['bufferView']]
   data = b[bv.get('byteOffset', 0): bv.get('byteOffset', 0) + bv['byteLength']]
-  images.append({'bufferView': view(data), 'mimeType': im['mimeType']})
-mat = dict(j['materials'][0]); mat['name'] = 'Kimmy'; mat.pop('extensions', None)
+  mime = im['mimeType']
+  if mime == 'image/png' and len(data) > 2_000_000:
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(data)).convert('RGB')
+    if ii == rm_img: img = img.resize((img.width // 2, img.height // 2), Image.LANCZOS)
+    o = io.BytesIO(); img.save(o, 'JPEG', quality=90); data, mime = o.getvalue(), 'image/jpeg'
+  images.append({'bufferView': view(data), 'mimeType': mime})
+if PROFILE == 'kimmy3': mat['pbrMetallicRoughness']['metallicFactor'] = 0   # skin and cloth: no metal
 mouth_mat = {'name': 'KimmyMouth', 'pbrMetallicRoughness': {'baseColorFactor': [1, 1, 1, 1], 'metallicFactor': 0, 'roughnessFactor': .7}}
 
 # nodes: 0 Armature, 1 mesh, then bones
