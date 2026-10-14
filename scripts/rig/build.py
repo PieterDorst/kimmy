@@ -80,7 +80,10 @@ S = 1.037 / HIPS_Y   # scale so her hips sit at the reference rig's hip height
 def in_face(p):
   return (np.abs(p[..., 0]) < .068) & (p[..., 1] > F['CHIN'] - .025) & (p[..., 1] < F['BROW'] + .032) & (p[..., 2] > .015)
 
-def subdivide(P, N, UV, T, sel):
+def subdivide(P, N, UV, T, sel, phong=0.0):
+  # Splits each selected triangle in four. With phong > 0 the new edge points are pushed onto the
+  # curved surface implied by the vertex normals (Phong tessellation), which rounds off the facets.
+  # Edge points depend only on the edge's two vertices, so UV-seam copies stay welded.
   key = {}
   newP, newN, newUV = [P], [N], [UV]
   cnt = [len(P)]
@@ -88,7 +91,11 @@ def subdivide(P, N, UV, T, sel):
     k = (a, b) if a < b else (b, a)
     if k not in key:
       key[k] = cnt[0]; cnt[0] += 1
-      newP.append(((P[a] + P[b]) / 2)[None]); n = N[a] + N[b]; newN.append((n / (np.linalg.norm(n) + 1e-12))[None])
+      m = (P[a] + P[b]) / 2
+      if phong:
+        qa = m - np.dot(m - P[a], N[a]) * N[a]; qb = m - np.dot(m - P[b], N[b]) * N[b]
+        m = (1 - phong) * m + phong * (qa + qb) / 2
+      newP.append(m[None]); n = N[a] + N[b]; newN.append((n / (np.linalg.norm(n) + 1e-12))[None])
       newUV.append(((UV[a] + UV[b]) / 2)[None])
     return key[k]
   out = []
@@ -98,9 +105,12 @@ def subdivide(P, N, UV, T, sel):
     out += [(a, ab, ca), (ab, b_, bc), (ca, bc, c), (ab, bc, ca)]
   return np.concatenate(newP), np.concatenate(newN), np.concatenate(newUV), np.array(out, np.int64)
 
-for _ in range(2):
-  sel = in_face(P[T]).all(1)
-  P, N, UV, T = subdivide(P, N, UV, T, sel)
+# whole body: one rounded level (about 4x the triangles), then fresh smooth normals
+P, N, UV, T = subdivide(P, N, UV, T, np.ones(len(T), bool), phong=.75)
+N = smooth_normals(P, T)
+# face: one more flat level, enough density for lips and blinks
+sel = in_face(P[T]).all(1)
+P, N, UV, T = subdivide(P, N, UV, T, sel)
 
 # ---------------------------------------------------------------- lip cut
 CX, XL, XR, MY = F['CX'], F['XL'], F['XR'], F['MY']
