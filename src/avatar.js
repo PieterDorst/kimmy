@@ -55,6 +55,10 @@ export class Avatar {
       avatarIdleEyeContact: 0.6,
       avatarSpeakingEyeContact: 0.8,
       mixerGainSpeech: 3,
+      // Soft warm studio light: key from front-left, cool rim from behind, low fill.
+      lightAmbientColor: 0xfff2e0, lightAmbientIntensity: 0.8,
+      lightDirectColor: 0xffead3, lightDirectIntensity: 3, lightDirectPhi: 0.9, lightDirectTheta: 0.6,
+      lightSpotColor: 0xccddff, lightSpotIntensity: 12, lightSpotPhi: 0.6, lightSpotTheta: 3.6, lightSpotDispersion: 1,
     });
     Object.assign(this.head.animEmojis, EXTRA_EMOJIS);
     this.lipsync = null;
@@ -63,6 +67,9 @@ export class Avatar {
 
   async load(onProgress) {
     await this.head.showAvatar(AVATAR, onProgress);
+    // TalkingHead's room reflections wash the model out; keep them as subtle fill.
+    this.head.scene.environmentIntensity = 0.5;
+    this.head.renderer.toneMappingExposure = 0.9;
   }
 
   // Camera framing: "full" (whole body), "upper" (waist up) or "head".

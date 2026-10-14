@@ -18,6 +18,18 @@ N = acc(j, b, prim['attributes']['NORMAL']).astype(np.float64)
 UV = acc(j, b, prim['attributes']['TEXCOORD_0']).astype(np.float64)
 T = acc(j, b, prim['indices']).reshape(-1, 3).astype(np.int64)
 
+# Tripo splits vertices at every UV seam, which gives faceted shading. Recompute normals
+# smoothed across seams (area-weighted, welded by position) so she reads as a smooth surface.
+def smooth_normals(P, T):
+  fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
+  _, weld = np.unique(np.round(P / 1e-5).astype(np.int64), axis=0, return_inverse=True)
+  weld = weld.ravel()
+  acc_n = np.zeros((weld.max() + 1, 3))
+  for k in range(3): np.add.at(acc_n, weld[T[:, k]], fn)
+  n = acc_n[weld]
+  return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+N = smooth_normals(P, T)
+
 # ---------------------------------------------------------------- landmarks (source units, glTF axes, +x = her left)
 # Each Tripo export has its own proportions, so joints and face features are measured per model.
 if PROFILE == 'kimmy1':   # A-pose, measured from renders
