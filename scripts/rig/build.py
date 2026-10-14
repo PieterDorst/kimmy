@@ -1,13 +1,14 @@
-# Turns Pieter's Tripo Kimmy1.glb into a TalkingHead-ready avatar:
+# Turns Pieter's Tripo Kimmy GLB (Kimmy1 or Kimmy2) into a TalkingHead-ready avatar:
 # Mixamo/RPM skeleton (local axes copied from brunette-t.glb), skin weights,
 # a lip cut + mouth interior, and procedural ARKit + Oculus viseme blendshapes.
 import json, struct, sys, numpy as np
 from glbio import load, acc
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else '/mnt/project-files/kimmy/models/Kimmy1.glb'
 import os
-REF = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'brunette-t.glb')
+SRC = sys.argv[1] if len(sys.argv) > 1 else '/mnt/project-files/kimmy/models/Kimmy2.glb'
 OUT = sys.argv[2] if len(sys.argv) > 2 else 'kimmy.glb'
+PROFILE = sys.argv[3] if len(sys.argv) > 3 else 'kimmy2'
+REF = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'brunette-t.glb')
 
 # ---------------------------------------------------------------- mesh in
 j, b = load(SRC)
@@ -18,31 +19,54 @@ UV = acc(j, b, prim['attributes']['TEXCOORD_0']).astype(np.float64)
 T = acc(j, b, prim['indices']).reshape(-1, 3).astype(np.int64)
 
 # ---------------------------------------------------------------- landmarks (source units, glTF axes, +x = her left)
-HIPS_Y = 0.52
-L = {
-  'Hips': (0, HIPS_Y, 0), 'Spine': (0, .575, 0), 'Spine1': (0, .625, -.005), 'Spine2': (0, .675, -.01),
-  'Neck': (0, .765, -.015), 'Head': (0, .805, -.012), 'HeadTop_End': (0, .978, -.01),
-  'LeftEye': (.028, .875, .055),
-  'LeftShoulder': (.025, .745, -.02), 'LeftArm': (.10, .73, -.022), 'LeftForeArm': (.19, .716, -.024),
-  'LeftHand': (.285, .706, -.021),
-  'LeftHandThumb1': (.298, .700, -.006), 'LeftHandThumb2': (.310, .697, .002), 'LeftHandThumb3': (.320, .695, .009), 'LeftHandThumb4': (.328, .694, .015),
-  'LeftUpLeg': (.055, .50, 0), 'LeftLeg': (.08, .27, 0), 'LeftFoot': (.10, .065, -.02), 'LeftToeBase': (.105, .02, .06), 'LeftToe_End': (.105, .02, .115),
-}
-for f, base, tip in [('Index', (.328, .707, -.010), (.3566, .700, -.010)), ('Middle', (.329, .707, -.021), (.3606, .699, -.021)),
-                     ('Ring', (.328, .707, -.033), (.3566, .700, -.033)), ('Pinky', (.324, .706, -.044), (.344, .701, -.044))]:
-  base, tip = np.array(base), np.array(tip)
-  for k, t in zip((1, 2, 3, 4), (0, .42, .72, 1)):
-    L[f'LeftHand{f}{k}'] = tuple(base + (tip - base) * t)
+# Each Tripo export has its own proportions, so joints and face features are measured per model.
+if PROFILE == 'kimmy1':   # A-pose, measured from renders
+  L = {
+    'Hips': (0, .52, 0), 'Spine': (0, .575, 0), 'Spine1': (0, .625, -.005), 'Spine2': (0, .675, -.01),
+    'Neck': (0, .765, -.015), 'Head': (0, .805, -.012), 'HeadTop_End': (0, .978, -.01),
+    'LeftEye': (.028, .875, .055),
+    'LeftShoulder': (.025, .745, -.02), 'LeftArm': (.10, .73, -.022), 'LeftForeArm': (.19, .716, -.024),
+    'LeftHand': (.285, .706, -.021),
+    'LeftHandThumb1': (.298, .700, -.006), 'LeftHandThumb2': (.310, .697, .002), 'LeftHandThumb3': (.320, .695, .009), 'LeftHandThumb4': (.328, .694, .015),
+    'LeftUpLeg': (.055, .50, 0), 'LeftLeg': (.08, .27, 0), 'LeftFoot': (.10, .065, -.02), 'LeftToeBase': (.105, .02, .06), 'LeftToe_End': (.105, .02, .115),
+  }
+  for f, base, tip in [('Index', (.328, .707, -.010), (.3566, .700, -.010)), ('Middle', (.329, .707, -.021), (.3606, .699, -.021)),
+                       ('Ring', (.328, .707, -.033), (.3566, .700, -.033)), ('Pinky', (.324, .706, -.044), (.344, .701, -.044))]:
+    base, tip = np.array(base), np.array(tip)
+    for k, t in zip((1, 2, 3, 4), (0, .42, .72, 1)):
+      L[f'LeftHand{f}{k}'] = tuple(base + (tip - base) * t)
+  F = dict(MY=.8319, CURVE=.0011, CX=-.0008, XL=-.0205, XR=.019, LIPZ=.066, CHIN=.81, PIT=.045,
+           EX=.028, EXO=0, EY=.875, ERX=.0125, ERY=.0115, BROW=.903)
+else:   # kimmy2: T-pose; body joints from Tripo's own auto-rig, face measured from renders
+  L = {
+    'Hips': (0, .541, .004), 'Spine': (0, .595, .002), 'Spine1': (0, .645, -.002), 'Spine2': (0, .695, -.006),
+    'Neck': (0, .785, -.015), 'Head': (0, .82, -.012), 'HeadTop_End': (0, .977, -.01),
+    'LeftEye': (.027, .881, .055),
+    'LeftShoulder': (.033, .768, -.013), 'LeftArm': (.087, .768, -.013), 'LeftForeArm': (.233, .756, -.021),
+    'LeftHand': (.374, .748, -.032),
+    'LeftUpLeg': (.056, .518, .006), 'LeftLeg': (.083, .306, .01), 'LeftFoot': (.106, .071, -.021), 'LeftToeBase': (.11, .017, .048), 'LeftToe_End': (.11, .017, .10),
+  }
+  for f, pts in [('Thumb', [(.40, .743, -.019), (.421, .740, -.008), (.437, .733, 0)]),
+                 ('Index', [(.447, .747, -.017), (.463, .743, -.015), (.477, .741, -.013)]),
+                 ('Middle', [(.448, .747, -.028), (.465, .744, -.028), (.48, .741, -.028)]),
+                 ('Ring', [(.447, .745, -.041), (.462, .743, -.041), (.476, .741, -.042)]),
+                 ('Pinky', [(.441, .744, -.048), (.454, .740, -.051), (.464, .738, -.054)])]:
+    pts = [np.array(p) for p in pts]
+    pts.append(pts[2] + (pts[2] - pts[1]) * .9)   # fingertip
+    for k, p in enumerate(pts): L[f'LeftHand{f}{k + 1}'] = tuple(p)
+  F = dict(MY=.8402, CURVE=.0013, CX=-.0019, XL=-.020, XR=.0163, LIPZ=.0646, CHIN=.815, PIT=.062,
+           EX=.0273, EXO=-.0006, EY=.8812, ERX=.0118, ERY=.0088, BROW=.901)
 for k in list(L):
   if k.startswith('Left'):
     x, y, z = L[k]; L['Right' + k[4:]] = (-x, y, z)
 L = {k: np.array(v, float) for k, v in L.items()}
 
+HIPS_Y = L['Hips'][1]
 S = 1.037 / HIPS_Y   # scale so her hips sit at the reference rig's hip height
 
 # ---------------------------------------------------------------- face subdivision (denser face for lips and blinks)
 def in_face(p):
-  return (np.abs(p[..., 0]) < .068) & (p[..., 1] > .785) & (p[..., 1] < .935) & (p[..., 2] > .015)
+  return (np.abs(p[..., 0]) < .068) & (p[..., 1] > F['CHIN'] - .025) & (p[..., 1] < F['BROW'] + .032) & (p[..., 2] > .015)
 
 def subdivide(P, N, UV, T, sel):
   key = {}
@@ -67,15 +91,15 @@ for _ in range(2):
   P, N, UV, T = subdivide(P, N, UV, T, sel)
 
 # ---------------------------------------------------------------- lip cut
-CX, XL, XR = -.0008, -.0205, .019
+CX, XL, XR, MY = F['CX'], F['XL'], F['XR'], F['MY']
 def lipline(x):
-  return .8319 + .0011 * ((x - CX) / ((XR - XL) / 2)) ** 2
+  return MY + F['CURVE'] * ((x - CX) / ((XR - XL) / 2)) ** 2
 
 side = np.where(P[:, 1] >= lipline(P[:, 0]), 1, -1)
 def cuttable(tri):
   p = P[tri]
-  return (p[:, 0] > XL + .001).all() and (p[:, 0] < XR - .001).all() and (p[:, 2] > .045).all() and \
-         (np.abs(p[:, 1] - .832) < .01).all() and len(set(side[tri])) == 2
+  return (p[:, 0] > XL + .001).all() and (p[:, 0] < XR - .001).all() and (p[:, 2] > F['LIPZ'] - .021).all() and \
+         (np.abs(p[:, 1] - MY) < .01).all() and len(set(side[tri])) == 2
 
 cutpts = {}
 addP, addN, addUV, addSide = [], [], [], []
@@ -116,7 +140,7 @@ print('cut triangles', ncut, 'verts', len(P), 'tris', len(T))
 # ---------------------------------------------------------------- mouth interior (dark, with a strip of upper teeth)
 face = in_face(P) & (P[:, 2] > .04)
 FP = P[face]
-gx = np.linspace(XL - .003, XR + .003, 17); gy = np.linspace(.813, .841, 29)
+gx = np.linspace(XL - .003, XR + .003, 17); gy = np.linspace(MY - .019, MY + .009, 29)
 MP, MC = [], []
 for y in gy:
   for x in gx:
@@ -210,19 +234,26 @@ DEFORM = [nm for nm in bones if nm in PRIMARY]
 seg_a = np.array([L[nm] for nm in DEFORM]); seg_b = np.array([L[PRIMARY[nm]] for nm in DEFORM])
 
 def allowed(nm, p):
+  # Which vertices a bone may influence, relative to the joints (keeps hair off the arms, legs apart, etc.)
   x, y, z = p[:, 0], p[:, 1], p[:, 2]; ax = np.abs(x)
+  Y = lambda b_: L[b_][1]
+  arm, hand = L['LeftArm'], L['LeftHand']
+  # long hair hanging in front of or behind the shoulders: outside the sleeve's depth range
+  hair = (ax < arm[0] + .06) & ((z > arm[2] + .045) | (z < arm[2] - .055))
   sideok = (x > .004) if nm.startswith('Left') else (x < -.004) if nm.startswith('Right') else np.ones(len(p), bool)
   if 'Hand' in nm and nm[-1] in '123':
-    base = (ax > .29) & (z > -.012) if 'Thumb' in nm else (ax > .31)
-    return sideok & base & (y > .66)
+    base = (ax > hand[0] + .005) & (z > -.012) if 'Thumb' in nm else (ax > hand[0] + .025)
+    return sideok & base & (y > hand[1] - .046)
   if nm.endswith(('Arm', 'ForeArm', 'Hand')):
-    return sideok & (ax > .098) & (y > .62) & (y < .79) & ~((y < .685) & (ax < .14))
-  if nm.endswith('Shoulder'): return sideok & (ax > .03) & (y > .68) & (y < .80)
-  if nm.endswith(('UpLeg', 'Leg')): return sideok & (y < .58)
+    cap = (ax > arm[0] - .02) & (y > arm[1] + .005)   # top of the shoulder rides along with the arm
+    return sideok & ~hair & ((ax > .098) | cap) & (y > arm[1] - .11) & (y < arm[1] + .06) & ~((y < arm[1] - F['PIT']) & (ax < arm[0] + .04))
+  if nm.endswith('Shoulder'): return sideok & ~hair & (ax > .03) & (y > arm[1] - .05) & (y < arm[1] + .07)
+  if nm.endswith(('UpLeg', 'Leg')): return sideok & (y < Y('Hips') + .06)
   if nm.endswith('Foot'): return sideok & (y < .15)
   if nm.endswith('ToeBase'): return sideok & (y < .06)
-  return {'Head': y > .775, 'Neck': (y > .72) & (y < .86), 'Spine2': y > .6, 'Spine1': (y > .55) & (y < .75),
-          'Spine': (y > .48) & (y < .68), 'Hips': y < .62}[nm]
+  return {'Head': y > Y('Head') - .03, 'Neck': (y > Y('Neck') - .045) & (y < Y('Neck') + .095),
+          'Spine2': y > Y('Spine2') - .075, 'Spine1': (y > Y('Spine1') - .075) & (y < Y('Spine1') + .125),
+          'Spine': (y > Y('Spine') - .095) & (y < Y('Spine') + .105), 'Hips': y < Y('Hips') + .10}[nm]
 
 def weights(p):
   ab = seg_b - seg_a
@@ -232,7 +263,7 @@ def weights(p):
     d[:, i] = np.linalg.norm(p - (seg_a[i] + t[:, None] * ab[i]), axis=1)
     d[~allowed(DEFORM[i], p), i] = np.inf
   # rigid face: lips, eyes and brows must move only by blendshapes
-  hard = (p[:, 1] > .80) & (np.abs(p[:, 0]) < .075) & (p[:, 2] > .02)
+  hard = (p[:, 1] > F['CHIN'] - .01) & (np.abs(p[:, 0]) < .075) & (p[:, 2] > .02)
   d[hard] = np.inf; d[hard, DEFORM.index('Head')] = .01
   d = np.maximum(d, .004)
   w = (d.min(1, keepdims=True) / d) ** 7
@@ -259,10 +290,10 @@ up, lo = side > 0, side < 0
 lipprof = np.sqrt(np.clip(1 - ((x - CX) / hw) ** 2, 0, 1))
 broad = np.clip(1 - ((x - CX) / .036) ** 2, 0, 1) ** 1.5
 below = np.clip((ly - y) / .012, 0, 1)
-jawprof = (lipprof * (1 - below) + broad * below) * sstep(.79, .812, y) * front * (np.abs(x - CX) < .045)
+jawprof = (lipprof * (1 - below) + broad * below) * sstep(F['CHIN'] - .02, F['CHIN'] + .002, y) * front * (np.abs(x - CX) < .045)
 lipnear_up = (1 - sstep(0, .008, y - ly)) * lipprof * front
 lipnear_lo = (1 - sstep(0, .008, ly - y)) * lipprof * front
-mouthw = bump(CX, .831, .032, .02)
+mouthw = bump(CX, MY - .001, .032, .02)
 
 def V(dx=0, dy=0, dz=0):
   d = np.zeros_like(P); d[:, 0] += dx; d[:, 1] += dy; d[:, 2] += dz; return d
@@ -275,7 +306,7 @@ SH['jawLeft'] = V(dx=np.where(lo, .002 * jawprof, 0)); SH['jawRight'] = V(dx=np.
 SH['mouthClose'] = V(dz=.0005 * mouthw)
 for nm, sx in (('Left', 1), ('Right', -1)):
   cx = XR if sx > 0 else XL
-  c = bump(cx, .8325, .013, .011)
+  c = bump(cx, MY + .0006, .013, .011)
   SH[f'mouthSmile{nm}'] = V(dx=sx * .0025 * c, dy=.0035 * c, dz=-.0015 * c)
   SH[f'mouthFrown{nm}'] = V(dx=sx * .001 * c, dy=-.003 * c)
   SH[f'mouthStretch{nm}'] = V(dx=sx * .0035 * c, dy=-.0008 * c)
@@ -285,27 +316,27 @@ for nm, sx in (('Left', 1), ('Right', -1)):
   SH[f'mouthUpperUp{nm}'] = V(dy=np.where(up, .0022 * lipnear_up * sstep(-.006, .006, sx * (x - CX)), 0))
   SH[f'mouthLowerDown{nm}'] = V(dy=np.where(lo, -.0028 * lipnear_lo * sstep(-.006, .006, sx * (x - CX)), 0))
   SH[f'mouth{nm}'] = V(dx=sx * .003 * mouthw)
-  ch = bump(sx * .036, .842, .018, .016)
+  ch = bump(sx * .036, MY + .01, .018, .016)
   SH[f'cheekSquint{nm}'] = V(dy=.0018 * ch)
-  ns = bump(sx * .008, .851, .007, .006)
+  ns = bump(sx * .008, MY + .019, .007, .006)
   SH[f'noseSneer{nm}'] = V(dy=.0015 * ns, dz=-.0005 * ns)
   # eyes: painted, so blink squashes the eye region onto the lower lid line
-  ex, ey, rx, ry = sx * .028, .875, .0125, .0115
+  ex, ey, rx, ry = sx * F['EX'] + F['EXO'], F['EY'], F['ERX'], F['ERY']
   r = np.sqrt(((x - ex) / rx) ** 2 + ((y - ey) / ry) ** 2)
   ew = (1 - sstep(1.0, 1.45, r)) * front
   lid = ey - .55 * ry
   SH[f'eyeBlink{nm}'] = V(dy=np.where(y > lid, .96, .45) * (lid - y) * ew)
   SH[f'eyeSquint{nm}'] = V(dy=np.where(y < ey, .3 * (ey - y), -.08 * (y - ey)) * ew)
   SH[f'eyeWide{nm}'] = V(dy=np.where(y > ey, .16 * (y - ey), 0) * ew)
-  bw = bump(sx * .028, .903, .026, .012)
-  inner = bump(sx * .011, .902, .013, .011)
-  outer = bump(sx * .042, .903, .015, .012)
+  bw = bump(sx * F['EX'] + F['EXO'], F['BROW'], .026, .012)
+  inner = bump(sx * .011 + F['EXO'], F['BROW'] - .001, .013, .011)
+  outer = bump(sx * .042 + F['EXO'], F['BROW'], .015, .012)
   SH[f'browDown{nm}'] = V(dy=-.0022 * bw - .001 * inner, dx=-sx * .001 * inner)
   SH[f'browOuterUp{nm}'] = V(dy=.003 * outer)
   for k in ('LookUp', 'LookDown', 'LookIn', 'LookOut'): SH[f'eye{k}{nm}'] = V()
-ib = bump(-.011, .902, .013, .011) + bump(.011, .902, .013, .011)
+ib = bump(-.011 + F['EXO'], F['BROW'] - .001, .013, .011) + bump(.011 + F['EXO'], F['BROW'] - .001, .013, .011)
 SH['browInnerUp'] = V(dy=.0032 * ib)
-SH['cheekPuff'] = (bump(.036, .838, .02, .02) + bump(-.036, .838, .02, .02))[:, None] * N * .003
+SH['cheekPuff'] = (bump(.036, MY + .006, .02, .02) + bump(-.036, MY + .006, .02, .02))[:, None] * N * .003
 SH['mouthPucker'] = V(dx=-.3 * (x - CX) * mouthw, dz=.003 * mouthw)
 SH['mouthFunnel'] = V(dx=-.2 * (x - CX) * mouthw, dz=.0025 * mouthw,
                       dy=np.where(up, .0015 * lipnear_up, -.0022 * lipnear_lo))
